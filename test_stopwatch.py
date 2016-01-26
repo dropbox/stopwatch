@@ -6,10 +6,10 @@ import enum
 
 from mock import ANY, Mock
 
-from .stopwatch_base import (
+from .stopwatch import (
     format_report,
     KeyValueAnnotation,
-    StopWatchBase,
+    StopWatch,
 )
 
 class MyBuckets(enum.Enum):
@@ -41,14 +41,14 @@ def add_timers(sw):
             with sw.timer('grand_children1', start_time=520, end_time=780):
                 pass
 
-class TestStopWatchBase(object):
+class TestStopWatch(object):
     def test_default_exports(self):
-        sw = StopWatchBase()
+        sw = StopWatch()
         add_timers(sw)
 
     def test_scope_in_loop(self):
         export_timers = Mock()
-        sw = StopWatchBase(
+        sw = StopWatch(
             export_aggregated_timers_func=export_timers,
         )
         with sw.timer('root', start_time=20, end_time=120):
@@ -69,7 +69,7 @@ class TestStopWatchBase(object):
     def test_override_exports(self):
         export_tracing = Mock()
         export_timers = Mock()
-        sw = StopWatchBase(
+        sw = StopWatch(
             export_tracing_func=export_tracing,
             export_aggregated_timers_func=export_timers,
         )
@@ -116,7 +116,7 @@ class TestStopWatchBase(object):
 
     def test_format_report(self):
         export_mock = Mock()
-        sw = StopWatchBase(export_aggregated_timers_func=export_mock)
+        sw = StopWatch(export_aggregated_timers_func=export_mock)
         add_timers(sw)
 
         assert export_mock.call_count == 1
@@ -142,7 +142,7 @@ class TestStopWatchBase(object):
     def test_time_func(self):
         export_mock = Mock()
         time_mock = Mock(side_effect=[50, 70])
-        sw = StopWatchBase(export_aggregated_timers_func=export_mock, time_func=time_mock)
+        sw = StopWatch(export_aggregated_timers_func=export_mock, time_func=time_mock)
 
         # Should call our timer func once on entry and once on exit
         with sw.timer('root'):

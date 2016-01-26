@@ -112,7 +112,7 @@ def default_export_aggregated_timers(reported_values, tags, total_time_ms, root_
     """Default implementation of aggregated timer logging"""
     print(format_report(reported_values, tags))
 
-class StopWatchBase(object):
+class StopWatch(object):
     """StopWatch - main class for storing timer stack and exposing timer functions/contextmanagers
     to the rest of the code"""
 
