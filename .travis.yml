@@ -1,8 +1,8 @@
 # Config file for automatic testing at travis-ci.org
 language: python
-python:
-    - 2.7
-    - 3.5
+env:
+    - TOX_ENV=py27
+    - TOX_ENV=py35
 
-script: tox
+script: tox -e $TOX_ENV
 install: pip install tox
