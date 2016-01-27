@@ -74,7 +74,7 @@ def format_report(reported_values, tags):
     """returns a pretty printed string of reported values"""
     # fetch all values only for main stopwatch, ignore all the tags
     log_names = sorted(
-        log_name for log_name in reported_values.iterkeys() if "+" not in log_name
+        log_name for log_name in reported_values if "+" not in log_name
     )
     if not log_names:
         return
@@ -101,7 +101,7 @@ def format_report(reported_values, tags):
             delta,
             delta / root_time * 100.0,
         ))
-    buf.append("Tags: %s" % (', '.join((t for t in tags if t))))
+    buf.append("Tags: %s" % (', '.join(sorted(tags))))
     return "\n".join(buf)
 
 def default_export_tracing(reported_traces):
@@ -238,10 +238,10 @@ class StopWatch(object):
             self._reported_values[log_name] = [tr_delta, 1, bucket]
 
         # go through slow tags and add them as tags if enough time has passed
-        for tag, timelimit in self._slowtags.items():
-            if timelimit * 1000.0 <= tr_delta:
-                self.addtag(tag)
-                self._slowtags.pop(tag)
+        if not self._timer_stack:
+            for tag, timelimit in self._slowtags.items():
+                if timelimit * 1000.0 <= tr_delta:
+                    self.addtag(tag)
 
         if self._should_trace_timer(log_name, tr_delta):
             tr_data.parent_span_id = self._timer_stack[-1].span_id if self._timer_stack else None

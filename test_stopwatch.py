@@ -6,7 +6,7 @@ import enum
 
 from mock import ANY, Mock
 
-from .stopwatch import (
+from stopwatch import (
     format_report,
     KeyValueAnnotation,
     StopWatch,
@@ -109,7 +109,7 @@ class TestStopWatch(object):
             ('root', 20, 920, None),
         ]
         assert all(trace.trace_annotations == [] for trace in traces[:9])
-        assert traces[9].trace_annotations == [
+        assert sorted(traces[9].trace_annotations) == [
             KeyValueAnnotation('Cooltag', '1'),
             KeyValueAnnotation('Slowtag', '1'),
         ]
