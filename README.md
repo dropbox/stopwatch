@@ -21,17 +21,17 @@ yields
 ************************
 root                    6206.833 (100%)
                     inner_task             50  5200.742 (84%)
-                                        outer_task              1  1002.351 (16%)
-                                        Tags:
+                    outer_task              1  1002.351 (16%)
+Tags:
 ```
 
 Contributing
 ------------
-Contributions are welcome. Tests can be run with `tox`.
+Contributions are welcome. Tests can be run with [tox][tox].
 
 Issues
 ------
-If you encounter any problems, please `file an issue`_ along with a detailed description.
+If you encounter any problems, please [file an issue][issues] along with a detailed description.
 
-.. _`file an issue`: https://github.com/dropbox/stopwatch/issues
-.. _`tox`: https://tox.readthedocs.org/en/latest/
+[issues]: https://github.com/dropbox/stopwatch/issues
+[tox]: https://tox.readthedocs.org/en/latest/
