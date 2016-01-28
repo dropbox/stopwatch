@@ -79,11 +79,12 @@ sw = stopwatch.StopWatch(
 
 Contributing
 ------------
-Contributions are welcome. Tests can be run with [tox][tox].
+Contributions are welcome. Tests can be run with [tox][tox]. Lint with [flake8][flake8]
 
 Issues
 ------
 If you encounter any problems, please [file an issue][issues] along with a detailed description.
 
+[flake8]: https://flake8.readthedocs.org/en/latest/
 [issues]: https://github.com/dropbox/stopwatch/issues
 [tox]: https://tox.readthedocs.org/en/latest/
