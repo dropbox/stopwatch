@@ -74,6 +74,12 @@ class TestStopWatch(object):
             export_aggregated_timers_func=export_timers,
         )
         add_timers(sw)
+        agg_report = sw.get_last_aggregated_report()
+        traces = sw.get_last_trace_report()
+
+        assert export_timers.call_args[1]['reported_values'] == agg_report[0]
+        assert export_timers.call_args[1]['tags'] == agg_report[1]
+        export_tracing.assert_called_once_with(reported_traces=traces)
 
         export_timers.assert_called_once_with(
             reported_values={
@@ -91,41 +97,32 @@ class TestStopWatch(object):
             root_span_name="root",
         )
 
-        assert export_tracing.call_count == 1
-        export_tracing.assert_called_once_with(reported_traces=ANY)
-        traces = export_tracing.call_args[1]['reported_traces']
-
         # Traces are listed in the same order that scopes close
-        assert [(trace.name, trace.start_time, trace.end_time, trace.parent_span_id) for trace in traces] == [
-            ('grand_children1', 60, 80, traces[2].span_id),
-            ('grand_children2', 100, 120, traces[2].span_id),
-            ('child1', 40, 140, traces[9].span_id),
-            ('grand_children3', 180, 190, traces[5].span_id),
-            ('grand_children2', 220, 280, traces[5].span_id),
-            ('child1', 160, 300, traces[9].span_id),
-            ('grand_children3', 380, 390, traces[8].span_id),
-            ('grand_children1', 520, 780, traces[8].span_id),
-            ('child2', 320, 880, traces[9].span_id),
-            ('root', 20, 920, None),
+        assert [(trace.name, trace.log_name, trace.start_time, trace.end_time, trace.parent_span_id) for trace in traces] == [
+            ('grand_children1', 'root#child1#grand_children1', 60, 80, traces[2].span_id),
+            ('grand_children2', 'root#child1#grand_children2', 100, 120, traces[2].span_id),
+            ('child1', 'root#child1', 40, 140, traces[9].span_id),
+            ('grand_children3', 'root#child1#grand_children3', 180, 190, traces[5].span_id),
+            ('grand_children2', 'root#child1#grand_children2', 220, 280, traces[5].span_id),
+            ('child1', 'root#child1', 160, 300, traces[9].span_id),
+            ('grand_children3', 'root#child2#grand_children3', 380, 390, traces[8].span_id),
+            ('grand_children1', 'root#child2#grand_children1', 520, 780, traces[8].span_id),
+            ('child2', 'root#child2', 320, 880, traces[9].span_id),
+            ('root', 'root', 20, 920, None),
         ]
         assert all(trace.trace_annotations == [] for trace in traces[:9])
-        assert sorted(traces[9].trace_annotations) == [
+        assert traces[9].trace_annotations == [
             KeyValueAnnotation('Cooltag', '1'),
             KeyValueAnnotation('Slowtag', '1'),
         ]
 
     def test_format_report(self):
-        export_mock = Mock()
-        sw = StopWatch(export_aggregated_timers_func=export_mock)
+        sw = StopWatch()
         add_timers(sw)
 
-        assert export_mock.call_count == 1
-        report = format_report(
-            export_mock.call_args[1]['reported_values'],
-            export_mock.call_args[1]['tags'],
-        )
-        assert report == \
-            "\n" \
+        agg_report = sw.get_last_aggregated_report()
+        formatted_report = format_report(agg_report)
+        assert formatted_report == \
             "************************\n" \
             "*** StopWatch Report ***\n" \
             "************************\n" \

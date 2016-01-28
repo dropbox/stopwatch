@@ -39,6 +39,7 @@ with sw.timer('root'):
             time.sleep(0.1)
     with sw.timer('outer_task'):
         time.sleep(1.0)
+print stopwatch.format_report(sw.get_last_aggregated_report())
 ```
 yields
 ```

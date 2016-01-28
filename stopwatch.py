@@ -66,12 +66,23 @@ class TimerData(object):
             self.log_name = name
 
     def __repr__(self):
-        return '%s(%s)' % (self.name, self.span_id)
+        return 'name=%r, span_id=%r start_time=%r end_time=%r annotations=%r, parent_span_id=%r,' \
+               'log_name=%r' % (
+            self.name,
+            self.span_id,
+            self.start_time,
+            self.end_time,
+            self.trace_annotations,
+            self.parent_span_id,
+            self.log_name,
+        )
 
 KeyValueAnnotation = collections.namedtuple('KeyValueAnnotation', ['key', 'value'])
 
-def format_report(reported_values, tags):
+def format_report(aggregated_report):
     """returns a pretty printed string of reported values"""
+    reported_values, tags = aggregated_report
+
     # fetch all values only for main stopwatch, ignore all the tags
     log_names = sorted(
         log_name for log_name in reported_values if "+" not in log_name
@@ -82,7 +93,6 @@ def format_report(reported_values, tags):
     root = log_names[0]
     root_time, root_count, bucket = reported_values[root]
     buf = [
-        "",
         "************************",
         "*** StopWatch Report ***",
         "************************",
@@ -110,7 +120,7 @@ def default_export_tracing(reported_traces):
 
 def default_export_aggregated_timers(reported_values, tags, total_time_ms, root_span_name):
     """Default implementation of aggregated timer logging"""
-    print(format_report(reported_values, tags))
+    pass
 
 class StopWatch(object):
     """StopWatch - main class for storing timer stack and exposing timer functions/contextmanagers
@@ -151,6 +161,9 @@ class StopWatch(object):
         self._time_func = time_func
         self.MAX_REQUEST_TRACING_SPANS_FOR_PATH = max_tracing_spans_for_path
         self.TRACING_MIN_NUM_MILLISECONDS = min_tracing_milliseconds
+        self._last_trace_report = None
+        self._last_aggregated_report = None
+        self._last_tags = None
 
         self._reset()
 
@@ -161,7 +174,6 @@ class StopWatch(object):
                 "StopWatch reset() but stack not empty: %r" % (self._timer_stack,)
         self._reported_values = {}
         self._reported_traces = []
-        # initially there is only one tag, which is None (i.e. no tag)
         self._tags = set()
         self._slowtags = dict()
 
@@ -248,10 +260,10 @@ class StopWatch(object):
 
             if not self._timer_stack:
                 # Add all stopwatch tags to the annotations.
-                tr_data.trace_annotations += [
+                tr_data.trace_annotations += list(sorted(
                     KeyValueAnnotation(tag, '1')
                     for tag in self._tags
-                ]
+                ))
 
             self._reported_traces.append(tr_data)
 
@@ -264,6 +276,9 @@ class StopWatch(object):
                 total_time_ms=tr_delta,
                 root_span_name=tr_data.name,
             )
+            self._last_trace_report = self._reported_traces
+            self._last_aggregated_report = self._reported_values
+            self._last_tags = self._tags
             self._reset()  # Clear out stats to prevent duplicate reporting
 
     def addtag(self, tag):
@@ -272,6 +287,15 @@ class StopWatch(object):
             tag: String to add as a tag
         """
         self._tags.add(tag)
+
+    def addslowtag(self, tag, timelimit):
+        """add tag that will only be used if root scope takes longer than
+        timelimit amount of seconds
+        Arguments:
+            tag: String tag name for the slowtag
+            timelimit: Lower bound for the root scope after which tag is applied
+        """
+        self._slowtags[tag] = timelimit
 
     def get_tags(self):
         """
@@ -283,14 +307,13 @@ class StopWatch(object):
         else:
             return None
 
-    def addslowtag(self, tag, timelimit):
-        """add tag that will only be used if root scope takes longer than
-        timelimit amount of seconds
-        Arguments:
-            tag: String tag name for the slowtag
-            timelimit: Lower bound for the root scope after which tag is applied
-        """
-        self._slowtags[tag] = timelimit
+    def get_last_trace_report(self):
+        """Returns the last trace report from when the last root_scope completed"""
+        return self._last_trace_report
+
+    def get_last_aggregated_report(self):
+        """Returns the last aggregated report and tags as a 2-tuple"""
+        return self._last_aggregated_report, self._last_tags
 
     #################
     # Private methods
