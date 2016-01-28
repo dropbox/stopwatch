@@ -66,8 +66,8 @@ class TimerData(object):
             self.log_name = name
 
     def __repr__(self):
-        return 'name=%r, span_id=%r start_time=%r end_time=%r annotations=%r, parent_span_id=%r,' \
-               'log_name=%r' % (
+        return ('name=%r, span_id=%r start_time=%r end_time=%r annotations=%r, parent_span_id=%r,'
+                'log_name=%r') % (
             self.name,
             self.span_id,
             self.start_time,

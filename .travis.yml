@@ -8,5 +8,7 @@ matrix:
         - python: 3.5
           env: TOX_ENV=py35
 
-script: tox -e $TOX_ENV
-install: pip install tox
+script:
+    - tox -e $TOX_ENV
+    - flake8 *.py
+install: pip install flake8 tox

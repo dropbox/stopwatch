@@ -53,7 +53,7 @@ class TestStopWatch(object):
         )
         with sw.timer('root', start_time=20, end_time=120):
             for t in range(30, 100, 10):
-                with sw.timer('child', start_time=t, end_time=t+5):
+                with sw.timer('child', start_time=t, end_time=t + 5):
                     pass
 
         export_timers.assert_called_once_with(
@@ -98,7 +98,8 @@ class TestStopWatch(object):
         )
 
         # Traces are listed in the same order that scopes close
-        assert [(trace.name, trace.log_name, trace.start_time, trace.end_time, trace.parent_span_id) for trace in traces] == [
+        assert [(trace.name, trace.log_name, trace.start_time,
+                 trace.end_time, trace.parent_span_id) for trace in traces] == [
             ('grand_children1', 'root#child1#grand_children1', 60, 80, traces[2].span_id),
             ('grand_children2', 'root#child1#grand_children2', 100, 120, traces[2].span_id),
             ('child1', 'root#child1', 40, 140, traces[9].span_id),
@@ -153,4 +154,3 @@ class TestStopWatch(object):
             total_time_ms=20000.0,
             root_span_name="root",
         )
-
