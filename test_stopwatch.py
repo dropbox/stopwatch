@@ -4,7 +4,7 @@ from __future__ import print_function
 
 import enum
 
-from mock import ANY, Mock
+from mock import Mock
 
 from stopwatch import (
     format_report,
