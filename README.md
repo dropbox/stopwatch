@@ -1,4 +1,4 @@
-# stopwatch
+# stopwatch [![Build Status](https://travis-ci.org/dropbox/stopwatch.svg?branch=master)](https://travis-ci.org/dropbox/stopwatch)
 Scoped, nested, aggregated python timing library
 
 StopWatch operates on a notion of "spans" which represent scopes of code for which we
