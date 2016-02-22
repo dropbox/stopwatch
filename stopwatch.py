@@ -1,4 +1,5 @@
 """StopWatch - library for adding timers and tags in your code for performance monitoring
+https://github.com/dropbox/stopwatch
 
 StopWatch operates on a notion of "spans" which represent scopes of code for which we
 want to measure timing. Spans can be nested and placed inside loops for aggregation.
