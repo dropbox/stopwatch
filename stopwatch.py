@@ -133,7 +133,7 @@ class StopWatch(object):
                  export_aggregated_timers_func=default_export_aggregated_timers,
                  max_tracing_spans_for_path=1000,
                  min_tracing_milliseconds=3,
-                 time_func=time.time):
+                 time_func=None):
         """
         Arguments:
           strict_assert: If True, assert on callsite misuse
@@ -159,7 +159,7 @@ class StopWatch(object):
         self._strict_assert = strict_assert
         self._export_tracing_func = export_tracing_func
         self._export_aggregated_timers_func = export_aggregated_timers_func
-        self._time_func = time_func
+        self._time_func = time_func or time.time
         self.MAX_REQUEST_TRACING_SPANS_FOR_PATH = max_tracing_spans_for_path
         self.TRACING_MIN_NUM_MILLISECONDS = min_tracing_milliseconds
         self._last_trace_report = None

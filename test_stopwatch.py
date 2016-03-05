@@ -154,3 +154,12 @@ class TestStopWatch(object):
             total_time_ms=20000.0,
             root_span_name="root",
         )
+
+    def test_time_func_default(self):
+        export_mock = Mock()
+        sw = StopWatch(export_aggregated_timers_func=export_mock, time_func=None)
+        with sw.timer('root'):
+            pass
+        assert export_mock.call_count == 1
+        assert export_mock.call_args[1]['root_span_name'] == 'root'
+        assert export_mock.call_args[1]['total_time_ms'] >= 0.0
