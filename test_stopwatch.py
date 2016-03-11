@@ -127,14 +127,14 @@ class TestStopWatch(object):
             "************************\n" \
             "*** StopWatch Report ***\n" \
             "************************\n" \
-            "root                    900000.000 (100%)\n" \
-            "    BUCKET_A        child1                  2  240000.000 (27%)\n" \
-            "                        grand_children1         1  20000.000 (2%)\n" \
-            "                        grand_children2         2  80000.000 (9%)\n" \
-            "                        grand_children3         1  10000.000 (1%)\n" \
-            "    BUCKET_B        child2                  1  560000.000 (62%)\n" \
-            "                        grand_children1         1  260000.000 (29%)\n" \
-            "                        grand_children3         1  10000.000 (1%)\n" \
+            "root                    900000.000ms (100%)\n" \
+            "    BUCKET_A        child1                  2  240000.000ms (27%)\n" \
+            "                        grand_children1         1  20000.000ms (2%)\n" \
+            "                        grand_children2         2  80000.000ms (9%)\n" \
+            "                        grand_children3         1  10000.000ms (1%)\n" \
+            "    BUCKET_B        child2                  1  560000.000ms (62%)\n" \
+            "                        grand_children1         1  260000.000ms (29%)\n" \
+            "                        grand_children3         1  10000.000ms (1%)\n" \
             "Tags: Cooltag, Slowtag"
 
     def test_time_func(self):

@@ -92,25 +92,25 @@ def format_report(aggregated_report):
         return
 
     root = log_names[0]
-    root_time, root_count, bucket = reported_values[root]
+    root_time_ms, root_count, bucket = reported_values[root]
     buf = [
         "************************",
         "*** StopWatch Report ***",
         "************************",
-        "%s    %.3f (%.f%%)" % (root.ljust(20), root_time / root_count, 100),
+        "%s    %.3fms (%.f%%)" % (root.ljust(20), root_time_ms / root_count, 100),
     ]
     for log_name in log_names[1:]:
-        delta, count, bucket = reported_values[log_name]
+        delta_ms, count, bucket = reported_values[log_name]
         depth = log_name[len(root):].count("#")
         short_name = log_name[log_name.rfind("#") + 1:]
         bucket_name = bucket.name if bucket else ""
 
-        buf.append("%s%s    %s %4d  %.3f (%.f%%)" % (
+        buf.append("%s%s    %s %4d  %.3fms (%.f%%)" % (
             "    " * depth, bucket_name.ljust(12),
             short_name.ljust(20),
             count,
-            delta,
-            delta / root_time * 100.0,
+            delta_ms,
+            delta_ms / root_time_ms * 100.0,
         ))
     buf.append("Tags: %s" % (', '.join(sorted(tags))))
     return "\n".join(buf)
