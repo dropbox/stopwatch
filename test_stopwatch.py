@@ -8,7 +8,7 @@ from mock import Mock
 
 from stopwatch import (
     format_report,
-    KeyValueAnnotation,
+    TraceKeyValueAnnotation,
     StopWatch,
 )
 
@@ -111,10 +111,10 @@ class TestStopWatch(object):
             ('child2', 'root#child2', 320, 880, traces[9].span_id),
             ('root', 'root', 20, 920, None),
         ]
-        assert all(trace.trace_annotations == [] for trace in traces[:9])
-        assert traces[9].trace_annotations == [
-            KeyValueAnnotation('Cooltag', '1'),
-            KeyValueAnnotation('Slowtag', '1'),
+        assert all(trace.trace_kv_annotations is None for trace in traces[:9])
+        assert traces[9].trace_kv_annotations == [
+            TraceKeyValueAnnotation('Cooltag', '1'),
+            TraceKeyValueAnnotation('Slowtag', '1'),
         ]
 
     def test_format_report(self):

@@ -36,6 +36,9 @@ import contextlib
 import random as insecure_random
 import time
 
+TraceAnnotation = collections.namedtuple('TraceAnnotation', ['name', 'time'])
+TraceKeyValueAnnotation = collections.namedtuple('TraceKeyValueAnnotation', ['key', 'value'])
+
 class TimerData(object):
     """
     Simple object that wraps all data needed for a single timer span.
@@ -48,6 +51,7 @@ class TimerData(object):
         'start_time',
         'end_time',
         'trace_annotations',
+        'trace_kv_annotations',
         'parent_span_id',
         'log_name',
     )
@@ -58,13 +62,29 @@ class TimerData(object):
         self.name = name
         self.start_time = start_time
         self.end_time = None  # Gets filled in later
-        self.trace_annotations = []
+        # These are tuples of event_name, event_time that will be added along with a start and
+        # end time to the span
+        self.trace_annotations = None
+        # These are tags to make it possible to search for this span
+        self.trace_kv_annotations = None
         self.parent_span_id = None  # Gets filled in at the end
 
         if parent_name:
-            self.log_name = "{}#{}".format(parent_name, name)
+            self.log_name = parent_name + '#' + name
         else:
             self.log_name = name
+
+    def add_annotation(self, event_name, event_time):
+        if self.trace_annotations is None:
+            self.trace_annotations = []
+
+        self.trace_annotations.append(TraceAnnotation(event_name, event_time))
+
+    def add_kv_annotation(self, key, value):
+        if self.trace_kv_annotations is None:
+            self.trace_kv_annotations = []
+
+        self.trace_kv_annotations.append(TraceKeyValueAnnotation(key, value))
 
     def __repr__(self):
         return ('name=%r, span_id=%r start_time=%r end_time=%r annotations=%r, parent_span_id=%r,'
@@ -177,6 +197,7 @@ class StopWatch(object):
         self._reported_traces = []
         self._tags = set()
         self._slowtags = dict()
+        self._traced_events = []
 
     ################
     # Public methods
@@ -252,19 +273,21 @@ class StopWatch(object):
 
         # go through slow tags and add them as tags if enough time has passed
         if not self._timer_stack:
-            for tag, timelimit in self._slowtags.items():
-                if timelimit * 1000.0 <= tr_delta:
+            threshold = tr_delta / 1000.0
+            for tag, timelimit in self._slowtags.iteritems():
+                if timelimit <= threshold:
                     self.addtag(tag)
 
         if self._should_trace_timer(log_name, tr_delta):
             tr_data.parent_span_id = self._timer_stack[-1].span_id if self._timer_stack else None
 
             if not self._timer_stack:
-                # Add all stopwatch tags to the annotations.
-                tr_data.trace_annotations += list(sorted(
-                    KeyValueAnnotation(tag, '1')
-                    for tag in self._tags
-                ))
+                for event_name, event_time in self._traced_events:
+                    tr_data.add_annotation(event_name, event_time)
+
+                # Add all stopwatch tags to the kv annotations of the root span
+                for tag in self._tags:
+                    tr_data.add_kv_annotation(tag, '1')
 
             self._reported_traces.append(tr_data)
 
@@ -289,15 +312,6 @@ class StopWatch(object):
         """
         self._tags.add(tag)
 
-    def addslowtag(self, tag, timelimit):
-        """add tag that will only be used if root scope takes longer than
-        timelimit amount of seconds
-        Arguments:
-            tag: String tag name for the slowtag
-            timelimit: Lower bound for the root scope after which tag is applied
-        """
-        self._slowtags[tag] = timelimit
-
     def get_tags(self):
         """
         Returns a copy of the list of tags this stopwatch is using.  Use a copy so that the caller
@@ -307,6 +321,19 @@ class StopWatch(object):
             return list(self._tags)
         else:
             return None
+
+    def addslowtag(self, tag, timelimit):
+        """add tag that will only be used if root scope takes longer than
+        timelimit amount of seconds
+        Arguments:
+            tag: String tag name for the slowtag
+            timelimit: Lower bound for the root scope after which tag is applied
+        """
+        self._slowtags[tag] = timelimit
+
+    def trace_root_event(self, event_name, event_time=None):
+        """ Adds an event that will show up on the root span in zipkin """
+        self._traced_events.append((event_name, event_time or self._time_func()),)
 
     def get_last_trace_report(self):
         """Returns the last trace report from when the last root_scope completed"""
