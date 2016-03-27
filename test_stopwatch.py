@@ -138,6 +138,7 @@ class TestStopWatch(object):
             "Tags: Cooltag, Slowtag"
 
     def test_time_func(self):
+        """Test override of the time_func"""
         export_mock = Mock()
         time_mock = Mock(side_effect=[50, 70])
         sw = StopWatch(export_aggregated_timers_func=export_mock, time_func=time_mock)
@@ -156,6 +157,7 @@ class TestStopWatch(object):
         )
 
     def test_time_func_default(self):
+        """Make sure that the default time_func=None"""
         export_mock = Mock()
         sw = StopWatch(export_aggregated_timers_func=export_mock, time_func=None)
         with sw.timer('root'):
@@ -163,3 +165,9 @@ class TestStopWatch(object):
         assert export_mock.call_count == 1
         assert export_mock.call_args[1]['root_span_name'] == 'root'
         assert export_mock.call_args[1]['total_time_ms'] >= 0.0
+
+    def test_export_default(self):
+        """Make sure that passing None in explicitly works"""
+        sw = StopWatch(export_aggregated_timers_func=None, export_tracing_func=None)
+        with sw.timer('root'):
+            pass

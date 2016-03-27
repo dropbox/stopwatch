@@ -130,8 +130,8 @@ class StopWatch(object):
 
     def __init__(self,
                  strict_assert=True,
-                 export_tracing_func=default_export_tracing,
-                 export_aggregated_timers_func=default_export_aggregated_timers,
+                 export_tracing_func=None,
+                 export_aggregated_timers_func=None,
                  max_tracing_spans_for_path=1000,
                  min_tracing_milliseconds=3,
                  time_func=None):
@@ -158,8 +158,10 @@ class StopWatch(object):
 
         self._timer_stack = []
         self._strict_assert = strict_assert
-        self._export_tracing_func = export_tracing_func
-        self._export_aggregated_timers_func = export_aggregated_timers_func
+        self._export_tracing_func = export_tracing_func or default_export_tracing
+        self._export_aggregated_timers_func = (
+            export_aggregated_timers_func or default_export_aggregated_timers
+        )
         self._time_func = time_func or time.time
         self.MAX_REQUEST_TRACING_SPANS_FOR_PATH = max_tracing_spans_for_path
         self.TRACING_MIN_NUM_MILLISECONDS = min_tracing_milliseconds
