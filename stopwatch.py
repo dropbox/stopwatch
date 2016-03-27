@@ -79,6 +79,7 @@ class TimerData(object):
         )
 
 KeyValueAnnotation = collections.namedtuple('KeyValueAnnotation', ['key', 'value'])
+AggregatedReport = collections.namedtuple('AggregatedReport', ['aggregated_values', 'tags'])
 
 def format_report(aggregated_report):
     """returns a pretty printed string of reported values"""
@@ -315,7 +316,7 @@ class StopWatch(object):
 
     def get_last_aggregated_report(self):
         """Returns the last aggregated report and tags as a 2-tuple"""
-        return self._last_aggregated_report, self._last_tags
+        return AggregatedReport(self._last_aggregated_report, self._last_tags)
 
     #################
     # Private methods
