@@ -62,7 +62,7 @@ class TimerData(object):
         self.parent_span_id = None  # Gets filled in at the end
 
         if parent_name:
-            self.log_name = "{}#{}".format(parent_name, name)
+            self.log_name = parent_name + '#' + name
         else:
             self.log_name = name
 
@@ -252,8 +252,9 @@ class StopWatch(object):
 
         # go through slow tags and add them as tags if enough time has passed
         if not self._timer_stack:
+            threshold = tr_delta / 1000.0
             for tag, timelimit in self._slowtags.items():
-                if timelimit * 1000.0 <= tr_delta:
+                if timelimit <= threshold:
                     self.addtag(tag)
 
         if self._should_trace_timer(log_name, tr_delta):
