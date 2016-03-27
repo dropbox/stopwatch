@@ -244,21 +244,21 @@ class StopWatch(object):
         # with StopWatch.timer('cool_loop_time'):
         #     for x in cool_loop:
         #         cool_stuff(x)
-        tr_delta = max((tr_data.end_time - tr_data.start_time) * 1000.0, 0.001)
+        tr_delta_ms = max((tr_data.end_time - tr_data.start_time) * 1000.0, 0.001)
         if log_name in self._reported_values:
-            self._reported_values[log_name][0] += tr_delta
+            self._reported_values[log_name][0] += tr_delta_ms
             self._reported_values[log_name][1] += 1
         else:
-            self._reported_values[log_name] = [tr_delta, 1, bucket]
+            self._reported_values[log_name] = [tr_delta_ms, 1, bucket]
 
         # go through slow tags and add them as tags if enough time has passed
         if not self._timer_stack:
-            threshold = tr_delta / 1000.0
+            threshold_s = tr_delta_ms / 1000.0
             for tag, timelimit in self._slowtags.items():
-                if timelimit <= threshold:
+                if timelimit <= threshold_s:
                     self.addtag(tag)
 
-        if self._should_trace_timer(log_name, tr_delta):
+        if self._should_trace_timer(log_name, tr_delta_ms):
             tr_data.parent_span_id = self._timer_stack[-1].span_id if self._timer_stack else None
 
             if not self._timer_stack:
@@ -276,7 +276,7 @@ class StopWatch(object):
             self._export_aggregated_timers_func(
                 reported_values=self._reported_values,
                 tags=self._tags,
-                total_time_ms=tr_delta,
+                total_time_ms=tr_delta_ms,
                 root_span_name=tr_data.name,
             )
             self._last_trace_report = self._reported_traces
