@@ -36,6 +36,9 @@ import contextlib
 import random as insecure_random
 import time
 
+TraceAnnotation = collections.namedtuple('TraceKeyValueAnnotation', ['key', 'value', 'time'])
+AggregatedReport = collections.namedtuple('AggregatedReport', ['aggregated_values', 'annotations'])
+
 class TimerData(object):
     """
     Simple object that wraps all data needed for a single timer span.
@@ -48,6 +51,7 @@ class TimerData(object):
         'start_time',
         'end_time',
         'trace_annotations',
+        'trace_kv_annotations',
         'parent_span_id',
         'log_name',
     )
@@ -78,12 +82,9 @@ class TimerData(object):
             self.log_name,
         )
 
-KeyValueAnnotation = collections.namedtuple('KeyValueAnnotation', ['key', 'value'])
-AggregatedReport = collections.namedtuple('AggregatedReport', ['aggregated_values', 'tags'])
-
 def format_report(aggregated_report):
     """returns a pretty printed string of reported values"""
-    reported_values, tags = aggregated_report
+    reported_values, annotations = aggregated_report
 
     # fetch all values only for main stopwatch, ignore all the tags
     log_names = sorted(
@@ -113,14 +114,14 @@ def format_report(aggregated_report):
             delta_ms,
             delta_ms / root_time_ms * 100.0,
         ))
-    buf.append("Tags: %s" % (', '.join(sorted(tags))))
+    buf.append("Annotations: %s" % (', '.join(sorted(ann.key for ann in annotations))))
     return "\n".join(buf)
 
 def default_export_tracing(reported_traces):
     """Default implementation of non-aggregated trace logging"""
     pass
 
-def default_export_aggregated_timers(reported_values, tags, total_time_ms, root_span_name):
+def default_export_aggregated_timers(reported_values, root_timer_data):
     """Default implementation of aggregated timer logging"""
     pass
 
@@ -167,7 +168,7 @@ class StopWatch(object):
         self.TRACING_MIN_NUM_MILLISECONDS = min_tracing_milliseconds
         self._last_trace_report = None
         self._last_aggregated_report = None
-        self._last_tags = None
+        self._last_annotations = None
 
         self._reset()
 
@@ -178,7 +179,6 @@ class StopWatch(object):
                 "StopWatch reset() but stack not empty: %r" % (self._timer_stack,)
         self._reported_values = {}
         self._reported_traces = []
-        self._tags = set()
         self._slowtags = dict()
 
     ################
@@ -256,45 +256,43 @@ class StopWatch(object):
         # go through slow tags and add them as tags if enough time has passed
         if not self._timer_stack:
             threshold_s = tr_delta_ms / 1000.0
-            for tag, timelimit in self._slowtags.items():
+            for slowtag, timelimit in self._slowtags.items():
                 if timelimit <= threshold_s:
-                    self.addtag(tag)
+                    tr_data.trace_annotations.append(
+                        TraceAnnotation(slowtag, '1', None)
+                    )
 
         if self._should_trace_timer(log_name, tr_delta_ms):
             tr_data.parent_span_id = self._timer_stack[-1].span_id if self._timer_stack else None
-
-            if not self._timer_stack:
-                # Add all stopwatch tags to the annotations.
-                tr_data.trace_annotations += list(sorted(
-                    KeyValueAnnotation(tag, '1')
-                    for tag in self._tags
-                ))
-
             self._reported_traces.append(tr_data)
 
-        # report stopwatch tag values once the final 'end' call has been made
+        # report stopwatch values once the final 'end' call has been made
         if not self._timer_stack:
             self._export_tracing_func(reported_traces=self._reported_traces)
             self._export_aggregated_timers_func(
                 reported_values=self._reported_values,
-                tags=self._tags,
-                total_time_ms=tr_delta_ms,
-                root_span_name=tr_data.name,
+                root_timer_data=tr_data,
             )
             self._last_trace_report = self._reported_traces
+            self._last_annotations = tr_data.trace_annotations
             self._last_aggregated_report = self._reported_values
-            self._last_tags = self._tags
             self._reset()  # Clear out stats to prevent duplicate reporting
 
-    def addtag(self, tag):
-        """Add a tag to the existing stopwatch report
-        Arguments:
-            tag: String to add as a tag
-        """
-        self._tags.add(tag)
+    def add_annotation(self, key, value='1', event_time=None):
+        """Add an annotation to the root scope"""
+        self._timer_stack[0].trace_annotations.append(
+            TraceAnnotation(key, value, event_time or self._time_func())
+        )
 
-    def addslowtag(self, tag, timelimit):
-        """add tag that will only be used if root scope takes longer than
+    def get_annotations(self):
+        """
+        Returns a copy of the list of tags this stopwatch is using.  Use a copy so that the caller
+        can't accidently alter it.
+        """
+        return self._timer_stack[0].trace_annotations
+
+    def add_slow_annotation(self, tag, timelimit):
+        """add annotation that will only be used if root scope takes longer than
         timelimit amount of seconds
         Arguments:
             tag: String tag name for the slowtag
@@ -302,23 +300,13 @@ class StopWatch(object):
         """
         self._slowtags[tag] = timelimit
 
-    def get_tags(self):
-        """
-        Returns a copy of the list of tags this stopwatch is using.  Use a copy so that the caller
-        can't accidently alter it.
-        """
-        if self._tags:
-            return list(self._tags)
-        else:
-            return None
-
     def get_last_trace_report(self):
         """Returns the last trace report from when the last root_scope completed"""
         return self._last_trace_report
 
     def get_last_aggregated_report(self):
         """Returns the last aggregated report and tags as a 2-tuple"""
-        return AggregatedReport(self._last_aggregated_report, self._last_tags)
+        return AggregatedReport(self._last_aggregated_report, self._last_annotations)
 
     def format_last_report(self):
         """Return formatted report from the last aggregated report. Simply calls

@@ -4,11 +4,14 @@ from __future__ import print_function
 
 import enum
 
-from mock import Mock
+from mock import (
+    ANY,
+    Mock,
+)
 
 from stopwatch import (
     format_report,
-    KeyValueAnnotation,
+    TraceAnnotation,
     StopWatch,
 )
 
@@ -17,11 +20,11 @@ class MyBuckets(enum.Enum):
     BUCKET_B = 2
 
 def add_timers(sw):
-    sw.addtag("Cooltag")
-    sw.addslowtag("Slowtag", 100)
-    sw.addslowtag("MegaSlowtag", 1000)
-
     with sw.timer('root', start_time=20, end_time=920):
+        sw.add_annotation("Cooltag", event_time=50)
+        sw.add_slow_annotation("Slowtag", 100)
+        sw.add_slow_annotation("MegaSlowtag", 1000)
+
         # First child span.
         with sw.timer('child1', start_time=40, end_time=140, bucket=MyBuckets.BUCKET_A):
             with sw.timer('grand_children1', start_time=60, end_time=80):
@@ -61,10 +64,11 @@ class TestStopWatch(object):
                 'root': [100000.0, 1, None],
                 'root#child': [35000.0, 7, None],
             },
-            tags=set(),
-            total_time_ms=100000.0,
-            root_span_name="root",
+            root_timer_data=ANY,
         )
+        assert export_timers.call_args[1]['root_timer_data'].start_time == 20.0
+        assert export_timers.call_args[1]['root_timer_data'].end_time == 120.0
+        assert export_timers.call_args[1]['root_timer_data'].name == 'root'
 
     def test_override_exports(self):
         export_tracing = Mock()
@@ -78,7 +82,6 @@ class TestStopWatch(object):
         traces = sw.get_last_trace_report()
 
         assert export_timers.call_args[1]['reported_values'] == agg_report[0]
-        assert export_timers.call_args[1]['tags'] == agg_report[1]
         export_tracing.assert_called_once_with(reported_traces=traces)
 
         export_timers.assert_called_once_with(
@@ -92,10 +95,15 @@ class TestStopWatch(object):
                 'root#child2#grand_children1': [260000.0, 1, None],
                 'root#child2#grand_children3': [10000.0, 1, None],
             },
-            tags=set(["Cooltag", "Slowtag"]),
-            total_time_ms=900000.0,
-            root_span_name="root",
+            root_timer_data=ANY,
         )
+        assert export_timers.call_args[1]['root_timer_data'].start_time == 20.0
+        assert export_timers.call_args[1]['root_timer_data'].end_time == 920.0
+        assert export_timers.call_args[1]['root_timer_data'].name == 'root'
+        assert export_timers.call_args[1]['root_timer_data'].trace_annotations == [
+            TraceAnnotation('Cooltag', '1', 50),
+            TraceAnnotation('Slowtag', '1', None),
+        ]
 
         # Traces are listed in the same order that scopes close
         assert [(trace.name, trace.log_name, trace.start_time,
@@ -113,8 +121,20 @@ class TestStopWatch(object):
         ]
         assert all(trace.trace_annotations == [] for trace in traces[:9])
         assert traces[9].trace_annotations == [
-            KeyValueAnnotation('Cooltag', '1'),
-            KeyValueAnnotation('Slowtag', '1'),
+            TraceAnnotation('Cooltag', '1', 50),
+            TraceAnnotation('Slowtag', '1', None),
+        ]
+
+    def test_trace_annotations(self):
+        sw = StopWatch()
+        with sw.timer('root', start_time=10, end_time=1000):
+            sw.add_annotation('key1', 'value1', event_time=101)
+            sw.add_annotation('key2', 'value2', event_time=104)
+        trace_report = sw.get_last_trace_report()
+        assert len(trace_report) == 1
+        assert trace_report[0].trace_annotations == [
+            TraceAnnotation('key1', 'value1', 101),
+            TraceAnnotation('key2', 'value2', 104),
         ]
 
     def test_format_report(self):
@@ -135,7 +155,7 @@ class TestStopWatch(object):
             "    BUCKET_B        child2                  1  560000.000ms (62%)\n" \
             "                        grand_children1         1  260000.000ms (29%)\n" \
             "                        grand_children3         1  10000.000ms (1%)\n" \
-            "Tags: Cooltag, Slowtag"
+            "Annotations: Cooltag, Slowtag"
 
         formatted_report2 = sw.format_last_report()
         assert formatted_report == formatted_report2
@@ -154,10 +174,11 @@ class TestStopWatch(object):
             reported_values={
                 'root': [20000.0, 1, None],
             },
-            tags=set(),
-            total_time_ms=20000.0,
-            root_span_name="root",
+            root_timer_data=ANY,
         )
+        assert export_mock.call_args[1]['root_timer_data'].start_time == 50.0
+        assert export_mock.call_args[1]['root_timer_data'].end_time == 70.0
+        assert export_mock.call_args[1]['root_timer_data'].name == 'root'
 
     def test_time_func_default(self):
         """Make sure that the default time_func=None"""
@@ -166,8 +187,9 @@ class TestStopWatch(object):
         with sw.timer('root'):
             pass
         assert export_mock.call_count == 1
-        assert export_mock.call_args[1]['root_span_name'] == 'root'
-        assert export_mock.call_args[1]['total_time_ms'] >= 0.0
+        tr_data = export_mock.call_args[1]['root_timer_data']
+        assert tr_data.name == 'root'
+        assert tr_data.end_time >= tr_data.start_time
 
     def test_export_default(self):
         """Make sure that passing None in explicitly works"""
