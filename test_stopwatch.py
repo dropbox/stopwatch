@@ -137,6 +137,9 @@ class TestStopWatch(object):
             "                        grand_children3         1  10000.000ms (1%)\n" \
             "Tags: Cooltag, Slowtag"
 
+        formatted_report2 = sw.format_last_report()
+        assert formatted_report == formatted_report2
+
     def test_time_func(self):
         """Test override of the time_func"""
         export_mock = Mock()

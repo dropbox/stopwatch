@@ -320,6 +320,11 @@ class StopWatch(object):
         """Returns the last aggregated report and tags as a 2-tuple"""
         return AggregatedReport(self._last_aggregated_report, self._last_tags)
 
+    def format_last_report(self):
+        """Return formatted report from the last aggregated report. Simply calls
+        format_last_report() on the get_last_aggregated_report()"""
+        return format_report(self.get_last_aggregated_report())
+
     #################
     # Private methods
     #################
