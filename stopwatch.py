@@ -51,7 +51,6 @@ class TimerData(object):
         'start_time',
         'end_time',
         'trace_annotations',
-        'trace_kv_annotations',
         'parent_span_id',
         'log_name',
     )
