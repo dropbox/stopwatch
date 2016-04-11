@@ -190,6 +190,8 @@ class StopWatch(object):
         self.start(name, start_time=start_time)
         try:
             yield
+        except Exception as e:
+            self.add_annotation('Exception', type(e).__name__, event_time=end_time)
         finally:
             self.end(name, end_time=end_time, bucket=bucket)
 

@@ -137,6 +137,15 @@ class TestStopWatch(object):
             TraceAnnotation('key2', 'value2', 104),
         ]
 
+    def test_exception_annotation(self):
+        sw = StopWatch()
+        with sw.timer('root', start_time=10, end_time=1000):
+            raise TypeError("Ahhh")
+        trace_report = sw.get_last_trace_report()
+        assert trace_report[0].trace_annotations == [
+            TraceAnnotation('Exception', 'TypeError', 1000),
+        ]
+
     def test_format_report(self):
         sw = StopWatch()
         add_timers(sw)
