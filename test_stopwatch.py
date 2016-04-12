@@ -3,6 +3,7 @@ from __future__ import division
 from __future__ import print_function
 
 import enum
+import pytest
 
 from mock import Mock
 
@@ -127,12 +128,16 @@ class TestStopWatch(object):
         ]
 
     def test_exception_annotation(self):
+        class SpecialError(Exception):
+            pass
+
         sw = StopWatch()
-        with sw.timer('root', start_time=10, end_time=1000):
-            raise TypeError("Ahhh")
+        with pytest.raises(SpecialError):
+            with sw.timer('root', start_time=10, end_time=1000):
+                raise SpecialError("Ahhh")
         trace_report = sw.get_last_trace_report()
         assert trace_report[0].trace_annotations == [
-            TraceAnnotation('Exception', 'TypeError', 1000),
+            TraceAnnotation('Exception', 'SpecialError', 1000),
         ]
 
     def test_format_report(self):
