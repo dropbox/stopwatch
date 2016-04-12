@@ -181,7 +181,7 @@ class StopWatch(object):
                 "StopWatch reset() but stack not empty: %r" % (self._timer_stack,)
         self._reported_values = {}
         self._reported_traces = []
-        self._slowtags = dict()
+        self._slow_annotations = dict()
 
     ################
     # Public methods
@@ -261,7 +261,7 @@ class StopWatch(object):
         # go through slow tags and add them as tags if enough time has passed
         if not self._timer_stack:
             threshold_s = tr_delta_ms / 1000.0
-            for slowtag, timelimit in self._slowtags.items():
+            for slowtag, timelimit in self._slow_annotations.items():
                 if timelimit <= threshold_s:
                     tr_data.trace_annotations.append(
                         TraceAnnotation(slowtag, '1', None)
@@ -303,7 +303,7 @@ class StopWatch(object):
             tag: String tag name for the slowtag
             timelimit: Lower bound for the root scope after which tag is applied
         """
-        self._slowtags[tag] = timelimit
+        self._slow_annotations[tag] = timelimit
 
     def get_last_trace_report(self):
         """Returns the last trace report from when the last root_scope completed"""
