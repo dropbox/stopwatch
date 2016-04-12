@@ -4,10 +4,7 @@ from __future__ import print_function
 
 import enum
 
-from mock import (
-    ANY,
-    Mock,
-)
+from mock import Mock
 
 from stopwatch import (
     format_report,
@@ -50,25 +47,20 @@ class TestStopWatch(object):
         add_timers(sw)
 
     def test_scope_in_loop(self):
-        export_timers = Mock()
-        sw = StopWatch(
-            export_aggregated_timers_func=export_timers,
-        )
+        sw = StopWatch()
         with sw.timer('root', start_time=20, end_time=120):
             for t in range(30, 100, 10):
                 with sw.timer('child', start_time=t, end_time=t + 5):
                     pass
 
-        export_timers.assert_called_once_with(
-            reported_values={
-                'root': [100000.0, 1, None],
-                'root#child': [35000.0, 7, None],
-            },
-            root_timer_data=ANY,
-        )
-        assert export_timers.call_args[1]['root_timer_data'].start_time == 20.0
-        assert export_timers.call_args[1]['root_timer_data'].end_time == 120.0
-        assert export_timers.call_args[1]['root_timer_data'].name == 'root'
+        agg_report = sw.get_last_aggregated_report()
+        assert agg_report.aggregated_values == {
+            'root': [100000.0, 1, None],
+            'root#child': [35000.0, 7, None],
+        }
+        assert agg_report.root_timer_data.start_time == 20.0
+        assert agg_report.root_timer_data.end_time == 120.0
+        assert agg_report.root_timer_data.name == 'root'
 
     def test_override_exports(self):
         export_tracing = Mock()
@@ -81,26 +73,23 @@ class TestStopWatch(object):
         agg_report = sw.get_last_aggregated_report()
         traces = sw.get_last_trace_report()
 
-        assert export_timers.call_args[1]['reported_values'] == agg_report[0]
+        export_timers.assert_called_once_with(aggregated_report=agg_report)
         export_tracing.assert_called_once_with(reported_traces=traces)
 
-        export_timers.assert_called_once_with(
-            reported_values={
-                'root': [900000.0, 1, None],
-                'root#child1': [240000.0, 2, MyBuckets.BUCKET_A],
-                'root#child1#grand_children1': [20000.0, 1, None],
-                'root#child1#grand_children2': [80000.0, 2, None],
-                'root#child1#grand_children3': [10000.0, 1, None],
-                'root#child2': [560000.0, 1, MyBuckets.BUCKET_B],
-                'root#child2#grand_children1': [260000.0, 1, None],
-                'root#child2#grand_children3': [10000.0, 1, None],
-            },
-            root_timer_data=ANY,
-        )
-        assert export_timers.call_args[1]['root_timer_data'].start_time == 20.0
-        assert export_timers.call_args[1]['root_timer_data'].end_time == 920.0
-        assert export_timers.call_args[1]['root_timer_data'].name == 'root'
-        assert export_timers.call_args[1]['root_timer_data'].trace_annotations == [
+        assert agg_report.aggregated_values == {
+            'root': [900000.0, 1, None],
+            'root#child1': [240000.0, 2, MyBuckets.BUCKET_A],
+            'root#child1#grand_children1': [20000.0, 1, None],
+            'root#child1#grand_children2': [80000.0, 2, None],
+            'root#child1#grand_children3': [10000.0, 1, None],
+            'root#child2': [560000.0, 1, MyBuckets.BUCKET_B],
+            'root#child2#grand_children1': [260000.0, 1, None],
+            'root#child2#grand_children3': [10000.0, 1, None],
+        }
+        assert agg_report.root_timer_data.start_time == 20.0
+        assert agg_report.root_timer_data.end_time == 920.0
+        assert agg_report.root_timer_data.name == 'root'
+        assert agg_report.root_timer_data.trace_annotations == [
             TraceAnnotation('Cooltag', '1', 50),
             TraceAnnotation('Slowtag', '1', None),
         ]
@@ -171,32 +160,28 @@ class TestStopWatch(object):
 
     def test_time_func(self):
         """Test override of the time_func"""
-        export_mock = Mock()
         time_mock = Mock(side_effect=[50, 70])
-        sw = StopWatch(export_aggregated_timers_func=export_mock, time_func=time_mock)
+        sw = StopWatch(time_func=time_mock)
 
         # Should call our timer func once on entry and once on exit
         with sw.timer('root'):
             pass
 
-        export_mock.assert_called_once_with(
-            reported_values={
-                'root': [20000.0, 1, None],
-            },
-            root_timer_data=ANY,
-        )
-        assert export_mock.call_args[1]['root_timer_data'].start_time == 50.0
-        assert export_mock.call_args[1]['root_timer_data'].end_time == 70.0
-        assert export_mock.call_args[1]['root_timer_data'].name == 'root'
+        agg_report = sw.get_last_aggregated_report()
+        assert agg_report.aggregated_values == {
+            'root': [20000.0, 1, None],
+        }
+        assert agg_report.root_timer_data.start_time == 50.0
+        assert agg_report.root_timer_data.end_time == 70.0
+        assert agg_report.root_timer_data.name == 'root'
 
     def test_time_func_default(self):
         """Make sure that the default time_func=None"""
-        export_mock = Mock()
-        sw = StopWatch(export_aggregated_timers_func=export_mock, time_func=None)
+        sw = StopWatch(time_func=None)
         with sw.timer('root'):
             pass
-        assert export_mock.call_count == 1
-        tr_data = export_mock.call_args[1]['root_timer_data']
+        agg_report = sw.get_last_aggregated_report()
+        tr_data = agg_report.root_timer_data
         assert tr_data.name == 'root'
         assert tr_data.end_time >= tr_data.start_time
 

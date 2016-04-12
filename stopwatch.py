@@ -37,7 +37,8 @@ import random as insecure_random
 import time
 
 TraceAnnotation = collections.namedtuple('TraceKeyValueAnnotation', ['key', 'value', 'time'])
-AggregatedReport = collections.namedtuple('AggregatedReport', ['aggregated_values', 'annotations'])
+AggregatedReport = collections.namedtuple('AggregatedReport',
+                                          ['aggregated_values', 'root_timer_data'])
 
 class TimerData(object):
     """
@@ -83,17 +84,18 @@ class TimerData(object):
 
 def format_report(aggregated_report):
     """returns a pretty printed string of reported values"""
-    reported_values, annotations = aggregated_report
+    values = aggregated_report.aggregated_values
+    root_tr_data = aggregated_report.root_timer_data
 
     # fetch all values only for main stopwatch, ignore all the tags
     log_names = sorted(
-        log_name for log_name in reported_values if "+" not in log_name
+        log_name for log_name in values if "+" not in log_name
     )
     if not log_names:
         return
 
     root = log_names[0]
-    root_time_ms, root_count, bucket = reported_values[root]
+    root_time_ms, root_count, bucket = values[root]
     buf = [
         "************************",
         "*** StopWatch Report ***",
@@ -101,7 +103,7 @@ def format_report(aggregated_report):
         "%s    %.3fms (%.f%%)" % (root.ljust(20), root_time_ms / root_count, 100),
     ]
     for log_name in log_names[1:]:
-        delta_ms, count, bucket = reported_values[log_name]
+        delta_ms, count, bucket = values[log_name]
         depth = log_name[len(root):].count("#")
         short_name = log_name[log_name.rfind("#") + 1:]
         bucket_name = bucket.name if bucket else ""
@@ -113,14 +115,16 @@ def format_report(aggregated_report):
             delta_ms,
             delta_ms / root_time_ms * 100.0,
         ))
-    buf.append("Annotations: %s" % (', '.join(sorted(ann.key for ann in annotations))))
+
+    annotations = sorted(ann.key for ann in root_tr_data.trace_annotations)
+    buf.append("Annotations: %s" % (', '.join(annotations)))
     return "\n".join(buf)
 
 def default_export_tracing(reported_traces):
     """Default implementation of non-aggregated trace logging"""
     pass
 
-def default_export_aggregated_timers(reported_values, root_timer_data):
+def default_export_aggregated_timers(aggregated_report):
     """Default implementation of aggregated timer logging"""
     pass
 
@@ -167,7 +171,6 @@ class StopWatch(object):
         self.TRACING_MIN_NUM_MILLISECONDS = min_tracing_milliseconds
         self._last_trace_report = None
         self._last_aggregated_report = None
-        self._last_annotations = None
 
         self._reset()
 
@@ -269,14 +272,14 @@ class StopWatch(object):
 
         # report stopwatch values once the final 'end' call has been made
         if not self._timer_stack:
-            self._export_tracing_func(reported_traces=self._reported_traces)
-            self._export_aggregated_timers_func(
-                reported_values=self._reported_values,
-                root_timer_data=tr_data,
-            )
+            agg_report = AggregatedReport(self._reported_values, tr_data)
+            # Stash information internally
             self._last_trace_report = self._reported_traces
-            self._last_annotations = tr_data.trace_annotations
-            self._last_aggregated_report = self._reported_values
+            self._last_aggregated_report = agg_report
+            # Hit callbacks
+            self._export_tracing_func(reported_traces=self._reported_traces)
+            self._export_aggregated_timers_func(aggregated_report=agg_report)
+
             self._reset()  # Clear out stats to prevent duplicate reporting
 
     def add_annotation(self, key, value='1', event_time=None):
@@ -307,12 +310,12 @@ class StopWatch(object):
 
     def get_last_aggregated_report(self):
         """Returns the last aggregated report and tags as a 2-tuple"""
-        return AggregatedReport(self._last_aggregated_report, self._last_annotations)
+        return self._last_aggregated_report
 
     def format_last_report(self):
         """Return formatted report from the last aggregated report. Simply calls
         format_last_report() on the get_last_aggregated_report()"""
-        return format_report(self.get_last_aggregated_report())
+        return format_report(self._last_aggregated_report)
 
     #################
     # Private methods
