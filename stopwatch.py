@@ -181,7 +181,8 @@ class StopWatch(object):
                 "StopWatch reset() but stack not empty: %r" % (self._timer_stack,)
         self._reported_values = {}
         self._reported_traces = []
-        self._slow_annotations = dict()
+        self._root_annotations = []
+        self._slow_annotations = {}
 
     ################
     # Public methods
@@ -206,10 +207,11 @@ class StopWatch(object):
             start_time:
                 Time (s) at which the scope began if set. (if not, use the current time)
         """
-
+        if start_time is None:
+            start_time = self._time_func()
         self._timer_stack.append(TimerData(
             name=name,
-            start_time=start_time or self._time_func(),
+            start_time=start_time,
             parent_name=self._timer_stack[-1].log_name if self._timer_stack else None
         ))
 
@@ -260,6 +262,8 @@ class StopWatch(object):
 
         # go through slow tags and add them as tags if enough time has passed
         if not self._timer_stack:
+            tr_data.trace_annotations.extend(self._root_annotations)
+
             threshold_s = tr_delta_ms / 1000.0
             for slowtag, timelimit in self._slow_annotations.items():
                 if timelimit <= threshold_s:
@@ -284,15 +288,27 @@ class StopWatch(object):
             self._reset()  # Clear out stats to prevent duplicate reporting
 
     def add_annotation(self, key, value='1', event_time=None):
-        """Add an annotation to the root scope"""
-        self._timer_stack[0].trace_annotations.append(
-            TraceAnnotation(key, value, event_time or self._time_func())
+        """Add an annotation to the root scope. Note that we don't do this directly
+        in order to support this case:
+
+        if x > 1000:
+            sw.add_annotation('big_work')
+        with sw.timer('root'):
+            do_work(x)
+
+        """
+        if event_time is None:
+            event_time = self._time_func()
+        self._root_annotations.append(
+            TraceAnnotation(key, value, event_time)
         )
 
     def add_span_annotation(self, key, value='1', event_time=None):
         """Add an annotation to the current scope"""
+        if event_time is None:
+            event_time = self._time_func()
         self._timer_stack[-1].trace_annotations.append(
-            TraceAnnotation(key, value, event_time or self._time_func())
+            TraceAnnotation(key, value, event_time)
         )
 
     def get_annotations(self):

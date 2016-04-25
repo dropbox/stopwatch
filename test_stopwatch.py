@@ -117,6 +117,7 @@ class TestStopWatch(object):
 
     def test_trace_annotations(self):
         sw = StopWatch()
+        sw.add_annotation('key0', 'value0', event_time=0)
         with sw.timer('root', start_time=10, end_time=1000):
             with sw.timer('child', start_time=20, end_time=900):
                 sw.add_span_annotation('key1', 'value1', event_time=101)
@@ -131,6 +132,7 @@ class TestStopWatch(object):
         ]
         assert trace_report[1].name == 'root'
         assert trace_report[1].trace_annotations == [
+            TraceAnnotation('key0', 'value0', 0),
             TraceAnnotation('key3', 'value3', 107),
         ]
 
