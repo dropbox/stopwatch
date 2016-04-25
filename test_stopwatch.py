@@ -92,7 +92,7 @@ class TestStopWatch(object):
         assert agg_report.root_timer_data.name == 'root'
         assert agg_report.root_timer_data.trace_annotations == [
             TraceAnnotation('Cooltag', '1', 50),
-            TraceAnnotation('Slowtag', '1', None),
+            TraceAnnotation('Slowtag', '1', 920),
         ]
 
         # Traces are listed in the same order that scopes close
@@ -112,7 +112,7 @@ class TestStopWatch(object):
         assert all(trace.trace_annotations == [] for trace in traces[:9])
         assert traces[9].trace_annotations == [
             TraceAnnotation('Cooltag', '1', 50),
-            TraceAnnotation('Slowtag', '1', None),
+            TraceAnnotation('Slowtag', '1', 920),
         ]
 
     def test_trace_annotations(self):

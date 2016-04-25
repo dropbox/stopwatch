@@ -268,7 +268,7 @@ class StopWatch(object):
             for slowtag, timelimit in self._slow_annotations.items():
                 if timelimit <= threshold_s:
                     tr_data.trace_annotations.append(
-                        TraceAnnotation(slowtag, '1', None)
+                        TraceAnnotation(slowtag, '1', tr_data.end_time)
                     )
 
         if self._should_trace_timer(log_name, tr_delta_ms):
