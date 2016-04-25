@@ -283,13 +283,13 @@ class StopWatch(object):
 
             self._reset()  # Clear out stats to prevent duplicate reporting
 
-    def add_root_annotation(self, key, value='1', event_time=None):
+    def add_annotation(self, key, value='1', event_time=None):
         """Add an annotation to the root scope"""
         self._timer_stack[0].trace_annotations.append(
             TraceAnnotation(key, value, event_time or self._time_func())
         )
 
-    def add_annotation(self, key, value='1', event_time=None):
+    def add_span_annotation(self, key, value='1', event_time=None):
         """Add an annotation to the current scope"""
         self._timer_stack[-1].trace_annotations.append(
             TraceAnnotation(key, value, event_time or self._time_func())
