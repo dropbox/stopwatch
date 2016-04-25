@@ -118,13 +118,20 @@ class TestStopWatch(object):
     def test_trace_annotations(self):
         sw = StopWatch()
         with sw.timer('root', start_time=10, end_time=1000):
-            sw.add_annotation('key1', 'value1', event_time=101)
-            sw.add_annotation('key2', 'value2', event_time=104)
+            with sw.timer('child', start_time=20, end_time=900):
+                sw.add_annotation('key1', 'value1', event_time=101)
+                sw.add_annotation('key2', 'value2', event_time=104)
+                sw.add_root_annotation('key3', 'value3', event_time=107)
         trace_report = sw.get_last_trace_report()
-        assert len(trace_report) == 1
+        assert len(trace_report) == 2
+        assert trace_report[0].name == 'child'
         assert trace_report[0].trace_annotations == [
             TraceAnnotation('key1', 'value1', 101),
             TraceAnnotation('key2', 'value2', 104),
+        ]
+        assert trace_report[1].name == 'root'
+        assert trace_report[1].trace_annotations == [
+            TraceAnnotation('key3', 'value3', 107),
         ]
 
     def test_exception_annotation(self):
