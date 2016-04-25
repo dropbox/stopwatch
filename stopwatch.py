@@ -311,13 +311,6 @@ class StopWatch(object):
             TraceAnnotation(key, value, event_time)
         )
 
-    def get_annotations(self):
-        """
-        Returns a copy of the list of tags this stopwatch is using.  Use a copy so that the caller
-        can't accidently alter it.
-        """
-        return self._timer_stack[0].trace_annotations
-
     def add_slow_annotation(self, tag, timelimit):
         """add annotation that will only be used if root scope takes longer than
         timelimit amount of seconds
