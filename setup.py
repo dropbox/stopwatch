@@ -10,6 +10,7 @@ setup(
     author_email='nipunn@dropbox.com',
     py_modules=['stopwatch'],
     url='https://github.com/dropbox/stopwatch',
+    download_url='https://github.com/dropbox/stopwatch/tarball/1.0',
 
     install_requires=[],
 )
