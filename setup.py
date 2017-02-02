@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(
-    name="stopwatch",
+    name="dbx-stopwatch",
     version="1.0",
     description='Scoped, nested, aggregated python timing library',
     keywords='stopwatch dropbox',
