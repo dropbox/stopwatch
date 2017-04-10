@@ -27,11 +27,20 @@ have 51 reports.
 By default, StopWatch dumps aggregated report to stdout after the root scope completes and
 resets internal state.
 
+Installation
+------------
+
+```
+pip install dbx_stopwatch
+```
+
 Usage
 -----
 
 Basic Usage
 ```
+import stopwatch
+
 sw = stopwatch.StopWatch()
 with sw.timer('root'):
     for i in range(50):
