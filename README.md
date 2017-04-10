@@ -31,7 +31,7 @@ Installation
 ------------
 
 ```
-pip install dbx_stopwatch
+pip install dbx-stopwatch
 ```
 
 Usage
