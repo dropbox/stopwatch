@@ -188,6 +188,15 @@ class StopWatch(object):
     # Public methods
     ################
     @contextlib.contextmanager
+    def sampling_timer(self, name, p, *n, **kwargs):
+        """Context manager that will time the context with probability p."""
+        if p > insecure_random.uniform(0.0, 1.0):
+            with self.timer(name, *n, **kwargs):
+                yield
+        else:
+            yield
+
+    @contextlib.contextmanager
     def timer(self, name, bucket=None, start_time=None, end_time=None):
         """Context manager to wrap a stopwatch span"""
         self.start(name, start_time=start_time)

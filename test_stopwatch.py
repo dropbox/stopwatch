@@ -47,6 +47,17 @@ class TestStopWatch(object):
         sw = StopWatch()
         add_timers(sw)
 
+    def test_sampling_timer(self):
+        for i in range(100):
+            sw = StopWatch()
+            with sw.timer('root', start_time=20, end_time=120):
+                with sw.sampling_timer('child', p=0.5, start_time=40, end_time=100):
+                    pass
+            agg_report = sw.get_last_aggregated_report()
+            assert len(agg_report.aggregated_values) in (1, 2)
+            if len(agg_report.aggregated_values) == 2:
+                assert agg_report.aggregated_values['root#child'] == [60000.0, 1, None]
+
     def test_scope_in_loop(self):
         sw = StopWatch()
         with sw.timer('root', start_time=20, end_time=120):
