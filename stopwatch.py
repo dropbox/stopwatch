@@ -184,8 +184,8 @@ class StopWatch(object):
         self._root_annotations = []
         self._slow_annotations = {}
 
-        # Dictionary of span names that have been cancelled in the current context. Used to ensure that a cancelled
-        # span is not redundantly ended as well.
+        # Dictionary of span names that have been cancelled in the current
+        # context. Used to ensure that a cancelled span is not redundantly ended as well.
         self._cancelled_spans = {}
 
     ################
@@ -292,7 +292,8 @@ class StopWatch(object):
             self._reset()  # Clear out stats to prevent duplicate reporting
 
     def cancel(self, name):
-        """Cancels a stopwatch span (must match latest started span). This span will not show up in any reports.
+        """Cancels a stopwatch span (must match latest started span).
+        This span will not show up in any reports.
         Arguments:
             name:
                 Name of the scope that's being cancelled. Must match the latest start().
