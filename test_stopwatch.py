@@ -47,6 +47,29 @@ class TestStopWatch(object):
         sw = StopWatch()
         add_timers(sw)
 
+    def test_stopwatch_cancel(self):
+        """Test that spans can be correctly cancelled and not reported."""
+        sw = StopWatch()
+        sw.start('root')
+        sw.start('child')
+        sw.cancel('child')
+        sw.end('root')
+        agg_values = sw.get_last_aggregated_report().aggregated_values
+        assert len(agg_values) == 1
+        assert 'root' in agg_values
+
+    def test_stopwatch_cancel_context_manager(self):
+        """Test that spans can be cancelled while inside a span context."""
+        sw = StopWatch()
+        with sw.timer('root'):
+            with sw.timer('child'):
+                sw.cancel('child')
+                with sw.timer('grand'):
+                    pass
+        agg_values = sw.get_last_aggregated_report().aggregated_values
+        assert len(agg_values) == 2
+        assert all([span in agg_values for span in ('root', 'root#grand')])
+
     def test_sampling_timer(self):
         for i in range(100):
             sw = StopWatch()
