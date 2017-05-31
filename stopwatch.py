@@ -184,6 +184,10 @@ class StopWatch(object):
         self._root_annotations = []
         self._slow_annotations = {}
 
+        # Dictionary of span names that have been cancelled in the current
+        # context. Used to ensure that a cancelled span is not redundantly ended as well.
+        self._cancelled_spans = {}
+
     ################
     # Public methods
     ################
@@ -206,7 +210,10 @@ class StopWatch(object):
             self.add_annotation('Exception', type(e).__name__, event_time=end_time)
             raise
         finally:
-            self.end(name, end_time=end_time, bucket=bucket)
+            if name in self._cancelled_spans:
+                del self._cancelled_spans[name]
+            else:
+                self.end(name, end_time=end_time, bucket=bucket)
 
     def start(self, name, start_time=None):
         """Begin a stopwatch span
@@ -236,23 +243,11 @@ class StopWatch(object):
                 For example, you might bucket all database queries together to see
                 overall how much time is spent in databases.
         """
-        if not self._timer_stack:
-            assert not self._strict_assert, \
-                "StopWatch end called but stack is empty: %s" % (name, )
-            return
 
         if not end_time:
             end_time = self._time_func()
 
-        tr_data = self._timer_stack.pop()
-        assert (not self._strict_assert) or (tr_data.name == name), \
-            "StopWatch end: %s, does not match latest start: %s" % (name, tr_data.name)
-
-        # if the top element on stack doesn't match "name", need to pop off things from the stack
-        # till it matches to maximally negate the possible inconsistencies
-        while name != tr_data.name and self._timer_stack:
-            tr_data = self._timer_stack.pop()
-
+        tr_data = self._pop_stack(name)
         tr_data.end_time = end_time
         log_name = tr_data.log_name
 
@@ -295,6 +290,16 @@ class StopWatch(object):
             self._export_aggregated_timers_func(aggregated_report=agg_report)
 
             self._reset()  # Clear out stats to prevent duplicate reporting
+
+    def cancel(self, name):
+        """Cancels a stopwatch span (must match latest started span).
+        This span will not show up in any reports.
+        Arguments:
+            name:
+                Name of the scope that's being cancelled. Must match the latest start().
+        """
+        self._pop_stack(name, end_type='cancel')
+        self._cancelled_spans[name] = 1
 
     def add_annotation(self, key, value='1', event_time=None):
         """Add an annotation to the root scope. Note that we don't do this directly
@@ -345,6 +350,24 @@ class StopWatch(object):
     #################
     # Private methods
     #################
+
+    def _pop_stack(self, name, end_type='end'):
+        """Remove elements off the top of the timer stack until the element with name `name` is found.
+        Return that element."""
+        if not self._timer_stack:
+            assert not self._strict_assert, \
+                "StopWatch %s called but stack is empty: %s" % (end_type, name,)
+            return
+
+        tr_data = self._timer_stack.pop()
+        assert (not self._strict_assert) or (tr_data.name == name), \
+            "StopWatch %s: %s, does not match latest start: %s" % (end_type, name, tr_data.name)
+
+        # if the top element on stack doesn't match "name", need to pop off things from the stack
+        # till it matches to maximally negate the possible inconsistencies
+        while name != tr_data.name and self._timer_stack:
+            tr_data = self._timer_stack.pop()
+        return tr_data
 
     def _should_trace_timer(self, log_name, delta_ms):
         """
