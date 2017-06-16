@@ -172,6 +172,9 @@ class StopWatch(object):
         self._last_trace_report = None
         self._last_aggregated_report = None
 
+        # Verifies how deep inside a context manager the current stopwatch is.
+        self.context_manager_depth = 0
+
         self._reset()
 
     def _reset(self):
@@ -186,7 +189,7 @@ class StopWatch(object):
 
         # Dictionary of span names that have been cancelled in the current
         # context. Used to ensure that a cancelled span is not redundantly ended as well.
-        self._cancelled_spans = {}
+        self._cancelled_spans = set()
 
     ################
     # Public methods
@@ -204,16 +207,15 @@ class StopWatch(object):
     def timer(self, name, bucket=None, start_time=None, end_time=None):
         """Context manager to wrap a stopwatch span"""
         self.start(name, start_time=start_time)
+        self.context_manager_depth += 1
         try:
             yield
         except Exception as e:
             self.add_annotation('Exception', type(e).__name__, event_time=end_time)
             raise
         finally:
-            if name in self._cancelled_spans:
-                del self._cancelled_spans[name]
-            else:
-                self.end(name, end_time=end_time, bucket=bucket)
+            self.context_manager_depth -= 1
+            self.end(name, end_time=end_time, bucket=bucket)
 
     def start(self, name, start_time=None):
         """Begin a stopwatch span
@@ -243,6 +245,13 @@ class StopWatch(object):
                 For example, you might bucket all database queries together to see
                 overall how much time is spent in databases.
         """
+
+        if name in self._cancelled_spans:
+            if self.context_manager_depth == 0:
+                self._reset()
+            else:
+                self._cancelled_spans.remove(name)
+            return
 
         if not end_time:
             end_time = self._time_func()
@@ -298,8 +307,13 @@ class StopWatch(object):
             name:
                 Name of the scope that's being cancelled. Must match the latest start().
         """
-        self._pop_stack(name, end_type='cancel')
-        self._cancelled_spans[name] = 1
+        if self.context_manager_depth > 0:
+            # We only care about keeping track of spans that we are cancelling while
+            # in the timer() context manager, due to . Outside of the context manager, it will
+            # be up to the Stopwatch end-user to ensure they are not cancelling spans
+            # redundantly.
+            self._cancelled_spans.add(name)
+        self._pop_stack(name)
 
     def add_annotation(self, key, value='1', event_time=None):
         """Add an annotation to the root scope. Note that we don't do this directly
@@ -351,9 +365,15 @@ class StopWatch(object):
     # Private methods
     #################
 
-    def _pop_stack(self, name, end_type='end'):
-        """Remove elements off the top of the timer stack until the element with name `name` is found.
-        Return that element."""
+    def _pop_stack(self, name):
+        """Remove elements off the top of the timer stack until the element with name `name`
+           is found. Return that element
+        Arguments:
+            name:
+                Name of the scope to pop off the timer stack. Must match the latest start()
+        """
+
+        end_type = 'cancel' if name in self._cancelled_spans else 'end'
         if not self._timer_stack:
             assert not self._strict_assert, \
                 "StopWatch %s called but stack is empty: %s" % (end_type, name,)
