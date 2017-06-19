@@ -58,6 +58,9 @@ class TestStopWatch(object):
         assert len(agg_values) == 1
         assert 'root' in agg_values
 
+        # Ensure that we are not leaking cancelled span data
+        assert not sw._cancelled_spans
+
     def test_stopwatch_cancel_context_manager(self):
         """Test that spans can be cancelled while inside a span context."""
         sw = StopWatch()
@@ -69,6 +72,57 @@ class TestStopWatch(object):
         agg_values = sw.get_last_aggregated_report().aggregated_values
         assert len(agg_values) == 2
         assert all([span in agg_values for span in ('root', 'root#grand')])
+
+        # Ensure that we are not leaking cancelled span data
+        assert not sw._cancelled_spans
+
+    def test_stopwatch_full_cancel(self):
+        """Test that an entire span - from root to children, can be cancelled."""
+
+        sw = StopWatch()
+
+        sw.start('root')
+        sw.start('child')
+        sw.start('grand')
+        sw.cancel('grand')
+        sw.cancel('child')
+        sw.cancel('root')
+
+        assert not sw.get_last_aggregated_report()
+        assert not sw._cancelled_spans
+
+        sw = StopWatch()
+        with sw.timer('root'):
+            with sw.timer('child'):
+                with sw.timer('grandchild'):
+                    sw.cancel('grandchild')
+                    sw.cancel('child')
+                    sw.cancel('root')
+
+        assert not sw.get_last_aggregated_report()
+        assert not sw._cancelled_spans
+
+    def test_stopwatch_cancel_multiple_root_spans(self):
+        """Test that spans can be cancelled inside a span context, with multiple
+           of the same root span created. Ensure that they behave in an expected way.
+        """
+
+        sw = StopWatch()
+        with sw.timer('root'):
+            with sw.timer('child'):
+                sw.cancel('child')
+                pass
+
+        with sw.timer('root'):
+            with sw.timer('child'):
+                pass
+
+        agg_values = sw.get_last_aggregated_report().aggregated_values
+        assert len(agg_values) == 2
+        assert all([span in agg_values for span in ('root', 'root#child')])
+
+        # Ensure that we are not leaking cancelled span data
+        assert not sw._cancelled_spans
 
     def test_sampling_timer(self):
         for i in range(100):
@@ -96,6 +150,26 @@ class TestStopWatch(object):
         assert agg_report.root_timer_data.start_time == 20.0
         assert agg_report.root_timer_data.end_time == 120.0
         assert agg_report.root_timer_data.name == 'root'
+
+    def test_multiple_root_spans(self):
+        """Test multiple root spans timed in one instance of the StopWatch object."""
+        sw = StopWatch()
+
+        with sw.timer('root'):
+            with sw.timer('child'):
+                pass
+
+        agg_values = sw.get_last_aggregated_report().aggregated_values
+        assert len(agg_values) == 2
+        assert all([span in agg_values for span in ('root', 'root#child')])
+
+        with sw.timer('root'):
+            with sw.timer('different_child'):
+                pass
+
+        agg_values = sw.get_last_aggregated_report().aggregated_values
+        assert len(agg_values) == 2
+        assert all([span in agg_values for span in ('root', 'root#different_child')])
 
     def test_override_exports(self):
         export_tracing = Mock()
