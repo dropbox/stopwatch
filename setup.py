@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name="dbx-stopwatch",
-    version="1.3",
+    version="1.4",
     description='Scoped, nested, aggregated python timing library',
     keywords='stopwatch dropbox',
     license='Apache License 2.0',
@@ -10,7 +10,7 @@ setup(
     author_email='nipunn@dropbox.com',
     py_modules=['stopwatch', 'stopwatch_global'],
     url='https://github.com/dropbox/stopwatch',
-    download_url='https://github.com/dropbox/stopwatch/tarball/1.3',
+    download_url='https://github.com/dropbox/stopwatch/tarball/1.4',
 
     install_requires=[],
 )
