@@ -10,10 +10,16 @@ from stopwatch_global import (
     global_sw_init,
 )
 
+
+def tracing_function(reported_traces):
+    pass
+
+
 @pytest.fixture
-def global_sw_fixture(request):
-    global_sw_init()
+def global_sw_fixture(request, tracing_func=tracing_function):
+    global_sw_init(export_tracing_func=tracing_func)
     request.addfinalizer(global_sw_del)
+
 
 @pytest.mark.usefixtures('global_sw_fixture')
 class TestStopWatchGlobal(object):
