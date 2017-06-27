@@ -128,6 +128,10 @@ def default_export_aggregated_timers(aggregated_report):
     """Default implementation of aggregated timer logging"""
     pass
 
+def default_export_aggregated_timers_and_tracing(aggregated_report, reported_traces):
+    """Default implementation of aggregated timer logging and non-aggregated trace logging"""
+
+
 class StopWatch(object):
     """StopWatch - main class for storing timer stack and exposing timer functions/contextmanagers
     to the rest of the code"""
@@ -138,7 +142,8 @@ class StopWatch(object):
                  export_aggregated_timers_func=None,
                  max_tracing_spans_for_path=1000,
                  min_tracing_milliseconds=3,
-                 time_func=None):
+                 time_func=None,
+                 export_aggregated_timers_and_tracing_func=None):
         """
         Arguments:
           strict_assert: If True, assert on callsite misuse
@@ -158,6 +163,9 @@ class StopWatch(object):
 
           time_func:
             Function which returns the current time in seconds. Defaults to time.time
+
+          export_aggregated_timers_and_tracing_func:
+            Function to export log timers and log tracing data when stack empties
         """
 
         self._timer_stack = []
@@ -165,6 +173,10 @@ class StopWatch(object):
         self._export_tracing_func = export_tracing_func or default_export_tracing
         self._export_aggregated_timers_func = (
             export_aggregated_timers_func or default_export_aggregated_timers
+        )
+        self._export_aggregated_timers_and_tracing_func = (
+            export_aggregated_timers_and_tracing_func or
+            default_export_aggregated_timers_and_tracing
         )
         self._time_func = time_func or time.time
         self.MAX_REQUEST_TRACING_SPANS_FOR_PATH = max_tracing_spans_for_path
@@ -297,6 +309,8 @@ class StopWatch(object):
             # Hit callbacks
             self._export_tracing_func(reported_traces=self._reported_traces)
             self._export_aggregated_timers_func(aggregated_report=agg_report)
+            self._export_aggregated_timers_and_tracing_func(aggregated_report=agg_report,
+                                                            reported_traces=self._reported_traces)
 
             self._reset()  # Clear out stats to prevent duplicate reporting
 
