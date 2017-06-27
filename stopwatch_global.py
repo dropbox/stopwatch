@@ -23,10 +23,12 @@ class _GlobalSw(object):
     """A global store for thread-local stopwatches. Helps with the common case where
     the caller only wants one stopwatch per thread.
     """
-    def __init__(self, time_func=None, export_aggregated_timers_func=None):
+    def __init__(self, time_func=None, export_aggregated_timers_func=None,
+                 export_tracing_func=None):
         self.threadlocal_sws = threading.local()
         self.time_func = time_func
         self.export_agg_timers_func = export_aggregated_timers_func
+        self.export_tracing_func = export_tracing_func
 
     def global_sw(self):
         """Returns the thread local stopwatch (creating if it doesn't exists)"""
@@ -34,6 +36,7 @@ class _GlobalSw(object):
             self.threadlocal_sws.sw = StopWatch(
                 export_aggregated_timers_func=self.export_agg_timers_func,
                 time_func=self.time_func,
+                export_tracing_func=self.export_tracing_func,
             )
         return self.threadlocal_sws.sw
 
