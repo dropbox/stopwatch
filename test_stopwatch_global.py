@@ -24,7 +24,7 @@ class TestStopWatchGlobal(object):
     def add_spans():
         with global_sw().timer('parent', start_time=20, end_time=80):
             global_sw().add_span_annotation('parent_annotation', 1)
-            with global_sw().timer('child', start_time=40, end_time=40):
+            with global_sw().timer('child', start_time=40, end_time=60):
                 global_sw().add_span_annotation('child_annotation', 1)
 
     def test_reported_traces(self):
@@ -32,6 +32,10 @@ class TestStopWatchGlobal(object):
         global_sw_init(export_tracing_func=tracing_function)
         self.add_spans()
         reported_traces = global_sw().get_last_trace_report()
+
+        assert len(reported_traces) == 2
+        assert reported_traces[0].trace_annotations[0].key == 'child_annotation'
+        assert reported_traces[1].trace_annotations[0].key == 'parent_annotation'
         tracing_function.assert_called_once_with(reported_traces=reported_traces)
 
     def test_global_sw(self):
