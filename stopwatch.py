@@ -97,9 +97,6 @@ def format_report(aggregated_report):
     root = log_names[0]
     root_time_ms, root_count, bucket = values[root]
     buf = [
-        "************************",
-        "*** StopWatch Report ***",
-        "************************",
         "%s    %.3fms (%.f%%)" % (root.ljust(20), root_time_ms / root_count, 100),
     ]
     for log_name in log_names[1:]:
@@ -117,7 +114,8 @@ def format_report(aggregated_report):
         ))
 
     annotations = sorted(ann.key for ann in root_tr_data.trace_annotations)
-    buf.append("Annotations: %s" % (', '.join(annotations)))
+    if annotations:
+        buf.append("Annotations: %s" % (', '.join(annotations)))
     return "\n".join(buf)
 
 def default_export_tracing(reported_traces):
@@ -175,8 +173,8 @@ class StopWatch(object):
             export_aggregated_timers_func or default_export_aggregated_timers
         )
         self._export_aggregated_timers_and_tracing_func = (
-            export_aggregated_timers_and_tracing_func or
-            default_export_aggregated_timers_and_tracing
+            export_aggregated_timers_and_tracing_func
+            or default_export_aggregated_timers_and_tracing
         )
         self._time_func = time_func or time.time
         self.MAX_REQUEST_TRACING_SPANS_FOR_PATH = max_tracing_spans_for_path
@@ -415,5 +413,7 @@ class StopWatch(object):
         # is making for loop with 50k stopwatches, we will log only the first
         # MAX_REQUEST_TRACING_SPANS_FOR_PATH spans.
 
-        return bool(log_name not in self._reported_values or
-                    self._reported_values[log_name][1] <= self.MAX_REQUEST_TRACING_SPANS_FOR_PATH)
+        return bool(
+            log_name not in self._reported_values
+            or self._reported_values[log_name][1] <= self.MAX_REQUEST_TRACING_SPANS_FOR_PATH
+        )
