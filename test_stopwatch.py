@@ -264,9 +264,6 @@ class TestStopWatch(object):
         agg_report = sw.get_last_aggregated_report()
         formatted_report = format_report(agg_report)
         assert formatted_report == \
-            "************************\n" \
-            "*** StopWatch Report ***\n" \
-            "************************\n" \
             "root                    900000.000ms (100%)\n" \
             "    BUCKET_A        child1                  2  240000.000ms (27%)\n" \
             "                        grand_children1         1  20000.000ms (2%)\n" \
